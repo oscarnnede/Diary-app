@@ -1,0 +1,100 @@
+pipeline {
+    agent any
+
+    environment {
+        BACKEND_IMAGE  = "diary-backend:latest"
+        FRONTEND_IMAGE = "diary-frontend:latest"
+        BACKEND_NODEPORT = "30080"   // must match k8s/02-backend.yaml
+    }
+
+    stages {
+
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
+        }
+
+        stage('Determine minikube IP') {
+            steps {
+                script {
+                    env.MINIKUBE_IP = sh(script: "minikube ip", returnStdout: true).trim()
+                    env.VITE_API_URL = "http://${env.MINIKUBE_IP}:${env.BACKEND_NODEPORT}"
+                    echo "Frontend will be built against: ${env.VITE_API_URL}"
+                }
+            }
+        }
+
+        stage('Build backend image') {
+            steps {
+                sh '''
+                    eval $(minikube docker-env)
+                    docker build -t $BACKEND_IMAGE ./backend
+                '''
+            }
+        }
+
+        stage('Build frontend image') {
+            steps {
+                sh '''
+                    eval $(minikube docker-env)
+                    docker build -t $FRONTEND_IMAGE \
+                        --build-arg VITE_API_URL=$VITE_API_URL \
+                        ./frontend
+                '''
+            }
+        }
+
+        // Optional: uncomment once you have a backend test suite.
+        // stage('Test backend') {
+        //     steps {
+        //         sh '''
+        //             cd backend
+        //             python3 -m venv venv
+        //             ./venv/bin/pip install -q -r requirements.txt
+        //             ./venv/bin/pytest
+        //         '''
+        //     }
+        // }
+
+        stage('Apply k8s manifests') {
+            steps {
+                // Idempotent: creates resources on the first run, no-ops on later
+                // runs if nothing in the YAML itself changed.
+                sh 'kubectl apply -f k8s/'
+            }
+        }
+
+        stage('Force rollout of freshly built images') {
+            steps {
+                // Both images are always tagged :latest and built straight into
+                // minikube's own docker daemon (imagePullPolicy: Never). Kubernetes
+                // only compares the image *tag*, not its content -- so without this
+                // explicit restart, a rebuilt :latest image would sit there unused
+                // and the running pods would keep serving the old code.
+                sh '''
+                    kubectl rollout restart deployment/diary-backend
+                    kubectl rollout restart deployment/diary-frontend
+                '''
+            }
+        }
+
+        stage('Verify rollout') {
+            steps {
+                sh '''
+                    kubectl rollout status deployment/diary-backend  --timeout=90s
+                    kubectl rollout status deployment/diary-frontend --timeout=90s
+                '''
+            }
+        }
+    }
+
+    post {
+        success {
+            echo "Deployed. Frontend: http://${env.MINIKUBE_IP}:30090  Backend: ${env.VITE_API_URL}"
+        }
+        failure {
+            echo "Pipeline failed -- check the stage logs above."
+        }
+    }
+}

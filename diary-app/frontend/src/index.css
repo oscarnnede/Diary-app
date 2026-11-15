@@ -1,0 +1,56 @@
+@import "tailwindcss";
+
+@theme {
+  --font-display: "Fredoka", "Baloo 2", sans-serif;
+  --font-body: "Inter", system-ui, sans-serif;
+
+  --color-canvas-from: #fff1f2;
+  --color-canvas-to: #eef2ff;
+  --color-ink: #2b2140;
+  --color-ink-soft: #6b6280;
+
+  --color-coral: #fb7185;
+  --color-coral-soft: #ffe4e6;
+  --color-amber: #f59e0b;
+  --color-amber-soft: #fef3c7;
+  --color-teal: #14b8a6;
+  --color-teal-soft: #ccfbf1;
+  --color-indigo: #6366f1;
+  --color-indigo-soft: #e0e7ff;
+  --color-rose: #e11d48;
+  --color-rose-soft: #ffe4e6;
+  --color-lime: #84cc16;
+  --color-lime-soft: #ecfccb;
+  --color-sky: #0ea5e9;
+  --color-sky-soft: #e0f2fe;
+  --color-plum: #a855f7;
+  --color-plum-soft: #f3e8ff;
+}
+
+html, body, #root {
+  height: 100%;
+}
+
+body {
+  font-family: var(--font-body);
+  color: var(--color-ink);
+  background: linear-gradient(160deg, var(--color-canvas-from), var(--color-canvas-to) 60%);
+  min-height: 100vh;
+}
+
+.font-display {
+  font-family: var(--font-display);
+}
+
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(107, 98, 128, 0.25);
+  border-radius: 999px;
+}
